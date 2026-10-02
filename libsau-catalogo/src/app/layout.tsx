@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 
+// Manejo seguro de la URL base para evitar errores de compilación
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "http://localhost:3000"
-  ),
-  title: "Catálogo de Productos",
+  metadataBase: new URL(siteUrl),
+  title: "Catálogo Oficial",
   description: "Encuentra y solicita tus productos directamente por WhatsApp",
 };
 
