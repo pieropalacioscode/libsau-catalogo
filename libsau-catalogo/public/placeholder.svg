@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400" fill="none">
+  <rect width="400" height="400" fill="#F3F4F6"/>
+  <path d="M160 140H240V220H160V140Z" stroke="#9CA3AF" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="180" cy="165" r="10" fill="#9CA3AF"/>
+  <path d="M160 210L185 185L205 200L220 180L240 210H160Z" fill="#9CA3AF"/>
+  <text x="50%" y="270" dominant-baseline="middle" text-anchor="middle" fill="#9CA3AF" font-family="sans-serif" font-size="16" font-weight="500">
+    Sin Imagen
+  </text>
+</svg>
