@@ -28,7 +28,7 @@ export default async function HomePage() {
           {products.map((product) => (
             <Link
               key={product.id}
-              href={`/productos/${product.id}`}
+              href={`/productos/${product.slug || product.id}`}
               className="bg-white rounded-xl border border-black/10 overflow-hidden flex flex-col hover:border-brand"
             >
               <div className="relative aspect-[3/4] w-full bg-paper">

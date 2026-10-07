@@ -1,26 +1,29 @@
-//src > app > productos > [id] > page.tsx
+//src > app > productos > [slug] > page.tsx
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getProduct, getProducts, getBusiness } from "@/lib/api";
+import { siteUrl } from "@/lib/site";
 
 export const revalidate = 60;
 
 type Props = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 };
+
+// URL absoluta y canónica del producto: se arma en el servidor con SITE_URL
+// y el slug que viene de la API, nunca con datos que escriba el visitante.
+const productUrl = (slug: string) => `${siteUrl.replace(/\/$/, "")}/productos/${slug}`;
 
 export async function generateStaticParams() {
   const products = await getProducts();
-  return products.map((p) => ({
-    id: String(p.id),
-  }));
+  return products.filter((p) => p.slug).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const product = await getProduct(id);
+  const { slug } = await params;
+  const product = await getProduct(slug);
 
   if (!product) return { title: "Producto no encontrado" };
 
@@ -35,33 +38,65 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${product.name} | S/ ${price}`,
     description,
-    alternates: { canonical: `/productos/${id}` },
+    // Siempre la URL con slug, incluso si se entró por el id viejo.
+    alternates: { canonical: `/productos/${product.slug}` },
     openGraph: {
       title: product.name,
       description,
+      url: `/productos/${product.slug}`,
       ...(product.image_url ? { images: [product.image_url] } : {}),
     },
   };
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const { id } = await params;
+  const { slug } = await params;
 
-  const [product, business] = await Promise.all([getProduct(id), getBusiness()]);
+  const [product, business] = await Promise.all([getProduct(slug), getBusiness()]);
 
   if (!product) {
     notFound();
   }
 
+  // /productos/120 (URL vieja) => redirección permanente a /productos/<slug>.
+  if (product.slug && slug !== product.slug) {
+    permanentRedirect(`/productos/${product.slug}`);
+  }
+
   const price = Number(product.price).toFixed(2);
+  const url = productUrl(product.slug);
   const phone = business?.whatsapp_number?.replace(/\D/g, "");
   const message = encodeURIComponent(
-    `Hola, estoy interesado en comprar el producto: *${product.name}* (Precio: S/ ${price})`
+    `Hola, estoy interesado en este producto: *${product.name}* (Precio: S/ ${price})\nEnlace: ${url}`
   );
   const whatsappUrl = phone ? `https://wa.me/${phone}?text=${message}` : null;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    url,
+    ...(product.description ? { description: product.description } : {}),
+    ...(product.image_url ? { image: [product.image_url] } : {}),
+    ...(product.isbn && /^\d{13}$/.test(product.isbn) ? { gtin13: product.isbn } : {}),
+    offers: {
+      "@type": "Offer",
+      url,
+      price,
+      priceCurrency: "PEN",
+    },
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
+      {/* El contenido viene de la base de datos: se escapa "<" para que nunca cierre el script. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+
       <Link href="/" className="text-sm font-semibold text-brand inline-block mb-4">
         Volver al catálogo
       </Link>

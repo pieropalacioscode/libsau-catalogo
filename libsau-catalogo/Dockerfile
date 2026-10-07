@@ -26,10 +26,21 @@ RUN npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
+
+# Las ARG de la etapa builder no se heredan: se redeclaran aquí para que
+# el servidor en marcha (revalidate: 60) siga viendo estos valores.
+ARG SITE_URL
+ARG SITE_TITLE
+ARG SITE_DESCRIPTION
+ARG SITE_TAGLINE
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    SITE_URL="$SITE_URL" \
+    SITE_TITLE="$SITE_TITLE" \
+    SITE_DESCRIPTION="$SITE_DESCRIPTION" \
+    SITE_TAGLINE="$SITE_TAGLINE"
 
 RUN addgroup -S app && adduser -S app -G app
 
