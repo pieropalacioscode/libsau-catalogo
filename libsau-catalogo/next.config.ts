@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // Hosts permitidos para imágenes de producto (separados por coma).
-const imageHosts = (process.env.IMAGE_HOSTS ?? "img.docentesmart.com,dnieve.kelpad.com")
+const imageHosts = (process.env.IMAGE_HOSTS ?? "img.kelbazar.com,dnieve.kelpad.com")
   .split(",")
   .map((h) => h.trim())
   .filter(Boolean);
