@@ -1,4 +1,11 @@
-import type { Product, Business, Category } from "@/types";
+import type { Product, Business, Category, Facets } from "@/types";
+import {
+  emptyState,
+  isCacheable,
+  toApiParams,
+  toFacetParams,
+  type CatalogState,
+} from "@/lib/catalog-query";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SLUG = process.env.NEXT_PUBLIC_NEGOCIO_SLUG;
@@ -9,38 +16,51 @@ if (!API_URL || !SLUG) {
 
 // 404 => null. Cualquier otro fallo => excepción, para que ISR
 // conserve la última versión buena en vez de cachear un "vacío".
-async function request(path: string): Promise<Response | null> {
-  const res = await fetch(`${API_URL}/public/${SLUG}${path}`, {
-    next: { revalidate: 60 },
-  });
+// fresh: sin caché (búsquedas y filtros: combinaciones ilimitadas).
+async function request(path: string, opts: { fresh?: boolean } = {}): Promise<Response | null> {
+  const res = await fetch(
+    `${API_URL}/public/${SLUG}${path}`,
+    opts.fresh ? { cache: "no-store" } : { next: { revalidate: 60 } },
+  );
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status} en ${path}`);
   return res;
 }
 
-async function api<T>(path: string): Promise<T | null> {
-  const res = await request(path);
+async function api<T>(path: string, opts: { fresh?: boolean } = {}): Promise<T | null> {
+  const res = await request(path, opts);
   return res ? ((await res.json()) as T) : null;
 }
 
 export type ProductPage = { items: Product[]; total: number };
 
-type PageOptions = { page?: number; limit?: number; q?: string; categoryId?: number };
+export type CatalogRequest = {
+  state?: CatalogState;
+  categorySlug?: string;
+  page?: number;
+  limit?: number;
+};
 
 // Una página del catálogo; el total (con filtros) viene en X-Total-Count.
-export async function getProductsPage(opts: PageOptions = {}): Promise<ProductPage> {
-  const params = new URLSearchParams();
-  params.set("limit", String(opts.limit ?? 24));
-  params.set("page", String(opts.page ?? 1));
-  if (opts.q) params.set("q", opts.q);
-  if (opts.categoryId) params.set("category_id", String(opts.categoryId));
+export async function getProductsPage(req: CatalogRequest = {}): Promise<ProductPage> {
+  const base = req.state ?? emptyState();
+  const state = req.page ? { ...base, page: req.page } : base;
+  const params = toApiParams(state, { categorySlug: req.categorySlug, limit: req.limit ?? 24 });
 
-  const res = await request(`/productos?${params.toString()}`);
+  const res = await request(`/productos?${params.toString()}`, { fresh: !isCacheable(state) });
   if (!res) return { items: [], total: 0 };
   return {
     items: (await res.json()) as Product[],
     total: Number(res.headers.get("X-Total-Count") ?? 0),
   };
+}
+
+// Categorías, atributos filtrables con conteos y rango de precio dentro del
+// contexto actual. null = la categoría no existe (404).
+export async function getFacets(req: { state?: CatalogState; categorySlug?: string } = {}): Promise<Facets | null> {
+  const state = req.state ?? emptyState();
+  const qs = toFacetParams(state, req.categorySlug).toString();
+  return api<Facets>(`/filtros${qs ? `?${qs}` : ""}`, { fresh: !isCacheable(state) });
 }
 
 // Todos los productos (sitemap, rutas estáticas): pide de a 500, el máximo de la API.
