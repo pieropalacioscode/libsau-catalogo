@@ -20,6 +20,7 @@ const montserrat = Montserrat({
 export async function generateMetadata(): Promise<Metadata> {
   const business = await getBusiness();
   const name = business?.name ?? "Catálogo";
+  const logo = safeHttpsUrl(business?.logo_url);
   const description =
     siteConfig.description ??
     `Encuentra y pide tus productos de ${name} directamente por WhatsApp.`;
@@ -29,6 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: siteConfig.title ?? name, template: `%s | ${name}` },
     description,
     openGraph: { siteName: name, locale: "es_PE" },
+    ...(logo ? { icons: { icon: logo, apple: logo } } : {}),
   };
 }
 

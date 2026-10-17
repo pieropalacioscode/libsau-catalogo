@@ -1,5 +1,9 @@
-// Formulario GET puro: funciona sin JavaScript. Lo usan el encabezado y el
-// respaldo (Suspense) mientras carga SearchBox.
+// Formulario GET puro: funciona sin JavaScript. Es el respaldo mientras carga
+// SearchBox (que añade sugerencias) y comparte sus estilos para que no haya saltos.
+export const SEARCH_WRAPPER =
+  "flex w-full items-center rounded-full border border-black/20 bg-white focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/30";
+export const SEARCH_INPUT = "min-w-0 flex-1 bg-transparent px-4 py-2.5 text-base outline-none";
+
 export default function SearchForm({
   placeholder,
   defaultValue = "",
@@ -8,12 +12,7 @@ export default function SearchForm({
   defaultValue?: string;
 }) {
   return (
-    <form
-      role="search"
-      action="/"
-      method="get"
-      className="flex w-full items-center rounded-full border border-black/20 bg-white focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/30"
-    >
+    <form role="search" action="/" method="get" className={SEARCH_WRAPPER}>
       <label htmlFor="site-search" className="sr-only">
         Buscar
       </label>
@@ -26,7 +25,7 @@ export default function SearchForm({
         maxLength={100}
         autoComplete="off"
         enterKeyHint="search"
-        className="min-w-0 flex-1 bg-transparent px-4 py-2.5 text-base outline-none"
+        className={SEARCH_INPUT}
       />
       <button
         type="submit"
