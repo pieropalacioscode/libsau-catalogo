@@ -7,7 +7,7 @@ import "./globals.css";
 import { getBusiness } from "@/lib/api";
 import { getClientConfig } from "@/config/clients";
 import { safeColor, safeHttpsUrl, siteConfig, siteUrl } from "@/lib/site";
-import SearchBox from "@/components/SearchBox";
+import HeaderSearch from "@/components/HeaderSearch";
 import SearchForm from "@/components/SearchForm";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -51,21 +51,25 @@ export default async function RootLayout({
     >
       <body className="font-sans text-ink antialiased min-h-screen flex flex-col">
         <header className="bg-white border-b border-black/10 sticky top-0 z-50">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Link href="/" className="inline-flex shrink-0 items-center gap-3">
+          <div className="max-w-6xl mx-auto px-4 py-2 sm:py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/" className="inline-flex min-w-0 items-center gap-3">
               {logo && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logo} alt="" className="h-10 w-auto" />
               )}
-              <span className="font-display text-xl font-extrabold tracking-tight text-brand">
+              <span className="truncate font-display text-xl font-extrabold tracking-tight text-brand">
                 {name}
               </span>
             </Link>
-            <div className="w-full sm:ml-auto sm:max-w-md sm:flex-1">
-              <Suspense fallback={<SearchForm placeholder={placeholder} />}>
-                <SearchBox placeholder={placeholder} />
-              </Suspense>
-            </div>
+            <Suspense
+              fallback={
+                <div className="w-full sm:ml-auto sm:max-w-md sm:flex-1">
+                  <SearchForm placeholder={placeholder} />
+                </div>
+              }
+            >
+              <HeaderSearch placeholder={placeholder} />
+            </Suspense>
           </div>
         </header>
 

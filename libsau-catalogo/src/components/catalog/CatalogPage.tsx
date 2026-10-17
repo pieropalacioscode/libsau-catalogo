@@ -11,8 +11,11 @@ import {
   type SortKey,
 } from "@/lib/catalog-query";
 import { getClientConfig } from "@/config/clients";
+import { activeFilterCount, hasPriceRange } from "@/lib/facets";
 import { siteConfig } from "@/lib/site";
 import type { Category } from "@/types";
+import FilterDrawer from "./FilterDrawer";
+import FilterPanel from "./FilterPanel";
 import Pagination from "./Pagination";
 import ProductCard from "./ProductCard";
 
@@ -70,6 +73,10 @@ export default async function CatalogPage({ basePath, categorySlug, searchParams
   const sortOptions = config.sorts.filter((s) => s !== "relevance");
   const defaultActive = state.sort === null || (searching && state.sort === "relevance");
 
+  const activeCount = activeFilterCount(state);
+  const showPrice = config.filters.showPrice && hasPriceRange(facets.price);
+  const hasPanel = filtered || facets.categories.length > 0 || facets.attributes.length > 0 || showPrice;
+
   return (
     <div>
       <section className="mb-6">
@@ -98,6 +105,14 @@ export default async function CatalogPage({ basePath, categorySlug, searchParams
           </p>
         )}
       </section>
+
+      {hasPanel && (
+        <div className="mb-4">
+          <FilterDrawer key={catalogHref(basePath, state)} activeCount={activeCount}>
+            <FilterPanel basePath={basePath} categorySlug={categorySlug} state={state} facets={facets} config={config} />
+          </FilterDrawer>
+        </div>
+      )}
 
       {facets.categories.length > 0 && (
         <nav aria-label="Categorías" className="-mx-4 mb-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">

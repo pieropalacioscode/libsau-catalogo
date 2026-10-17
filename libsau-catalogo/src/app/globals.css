@@ -45,3 +45,39 @@ input[type="search"]::-webkit-search-decoration {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* Panel lateral de filtros: <dialog> modal anclado a la izquierda */
+dialog.drawer {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  inset: 0 auto 0 0;
+  width: min(100vw, 24rem);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 0 40px rgb(0 0 0 / 0.25);
+  translate: -100% 0;
+  transition: translate 0.2s ease-out, overlay 0.2s allow-discrete, display 0.2s allow-discrete;
+}
+dialog.drawer[open] {
+  translate: 0 0;
+}
+@starting-style {
+  dialog.drawer[open] {
+    translate: -100% 0;
+  }
+}
+dialog.drawer::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+body:has(dialog.drawer[open]) {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.drawer {
+    transition: none;
+  }
+}

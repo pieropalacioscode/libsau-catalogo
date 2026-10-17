@@ -5,6 +5,8 @@ FAIL=0
 code()  { curl -s -o /dev/null -w "%{http_code}" "$H$1"; }
 cards() { curl -s "$H$1" | grep -o 'href="/productos/[^"]*"' | sort -u | wc -l | tr -d ' '; }
 has()   { curl -s "$H$1" | grep -c "$2" | tr -d ' '; }
+# Cuenta etiquetas <meta robots ... noindex>, no líneas: Next parte el HTML en varios fragmentos.
+tag()   { curl -s "$H$1" | grep -o '<meta name="robots"[^>]*noindex' | wc -l | tr -d ' '; }
 check() { if [ "$2" = "$3" ]; then echo "ok     $1"; else echo "FALLA  $1: obtuve [$2], esperaba [$3]"; FAIL=1; fi; }
 
 check "portada 200"                      "$(code /)" 200
@@ -14,8 +16,8 @@ check "pagina 3: 13 tarjetas"            "$(cards '/?pagina=3')" 13
 check "pagina 4 fuera de rango -> 404"   "$(code '/?pagina=4')" 404
 check "pagina=1 redirige"                "$(code '/?pagina=1')" 307
 check "orden invalido redirige"          "$(code '/?orden=hack')" 307
-check "portada sin noindex"              "$(has / noindex)" 0
-check "busqueda con noindex"             "$(has '/?q=lobo' noindex)" 1
+check "portada sin noindex"              "$(tag /)" 0
+check "busqueda con noindex"             "$(tag '/?q=lobo')" 1
 check "pagina 2 con canonical propio"    "$(has '/?pagina=2' 'rel=\"canonical\" href=\"[^\"]*pagina=2\"')" 1
 check "pagina 1 con rel=next"            "$(has / 'rel=\"next\"')" 1
 check "pagina 2 con rel=prev"            "$(has '/?pagina=2' 'rel=\"prev\"')" 1
@@ -35,4 +37,11 @@ check "buscar: con tildes (científicas)" "$(api '/api/buscar?q=cient%C3%ADficas
 check "buscar: 1 letra no consulta"      "$(api '/api/buscar?q=a' | grep -c '"items":\[\]')" 1
 check "buscar: sugiere categoria"        "$(api '/api/buscar?q=ciencia' | grep -c 'ciencia-para-ninos')" 1
 check "buscar: no expone sku/costo/stock" "$(api '/api/buscar?q=cientificas' | grep -ciE '"(sku|cost|stock)"')" 0
+check "filtros: boton hamburguesa"        "$(api '/' | grep -o 'aria-haspopup="dialog"' | wc -l)" 1
+check "filtros: panel ofrece Editorial"   "$(api '/' | grep -o 'value="Editorial:Bruño"' | wc -l)" 1
+check "filtros: sin filtro no hay casillas marcadas" "$(api '/' | grep -o 'checked=""' | wc -l)" 0
+check "filtros: la casilla elegida sale marcada"     "$(api '/?f=Editorial:Bru%C3%B1o' | grep -o 'checked=""' | wc -l)" 1
+check "filtros: Editorial:Bruño reduce el listado"   "$(n=$(api '/?f=Editorial:Bru%C3%B1o' | grep -o 'href="/productos/[^"]*"' | sort -u | wc -l); [ "$n" -ge 1 ] && [ "$n" -lt 24 ] && echo ok || echo "no($n)")" ok
+check "filtros: f invalido redirige"      "$(curl -s -o /dev/null -w '%{http_code}' "$H/?f=sinvalor")" 307
+check "filtros: precio invertido redirige" "$(curl -s -o /dev/null -w '%{http_code}' "$H/?precio_min=20&precio_max=10")" 307
 [ $FAIL = 0 ] && echo "TODO OK" || echo "HAY FALLAS"
