@@ -7,6 +7,8 @@
   --accent: #e86f51;
   --highlight: #f2c14e;
   --ink: #202321;
+  --focus: var(--accent); /* anillo de foco; un cliente con acento claro lo cambia a su --brand */
+  --chip: var(--brand); /* chips activos; un cliente puede darles otro color */
 }
 
 @theme inline {
@@ -15,6 +17,7 @@
   --color-accent: var(--accent);
   --color-highlight: var(--highlight);
   --color-ink: var(--ink);
+  --color-chip: var(--chip);
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-display: var(--font-montserrat), system-ui, sans-serif;
 }
@@ -26,7 +29,7 @@ body {
 
 /* Foco visible para quien navega con teclado */
 a:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -34,9 +37,15 @@ a:focus-visible {
 button:focus-visible,
 select:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Barra de progreso del carrusel del hero (la dibuja HeroCarousel en el punto activo) */
+@keyframes hero-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 /* El campo de búsqueda trae su propio botón de borrar */

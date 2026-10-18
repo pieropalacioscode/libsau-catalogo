@@ -13,6 +13,8 @@ import {
 import { getClientConfig } from "@/config/clients";
 import { activeFilterCount, hasPriceRange } from "@/lib/facets";
 import { siteConfig } from "@/lib/site";
+import Breadcrumbs, { type Crumb } from "@/components/Breadcrumbs";
+import { chipView } from "@/lib/categories";
 import type { Category } from "@/types";
 import FilterDrawer from "./FilterDrawer";
 import FilterPanel from "./FilterPanel";
@@ -30,18 +32,24 @@ const SORT_LABELS: Record<SortKey, string> = {
 const chip =
   "inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-semibold";
 const chipOff = "border-black/15 bg-white text-ink hover:border-brand";
-const chipOn = "border-brand bg-brand text-white";
+const chipOn = "border-chip bg-chip text-white";
 const MAX_CHIPS = 24;
 
-type Props = { basePath: string; categorySlug?: string; searchParams: RawSearchParams };
+type Props = {
+  basePath: string;
+  categorySlug?: string;
+  searchParams: RawSearchParams;
+  embeddedTitle?: string; // portada de marca: el título pasa a h2 (el h1 es el del hero)
+};
 
-export default async function CatalogPage({ basePath, categorySlug, searchParams }: Props) {
+export default async function CatalogPage({ basePath, categorySlug, searchParams, embeddedTitle }: Props) {
   const config = getClientConfig();
 
   // La categoría se valida primero: una categoría inexistente es 404, no una redirección.
+  const allCategories = await getCategories();
   let category: Category | undefined;
   if (categorySlug) {
-    category = (await getCategories()).find((c) => c.slug === categorySlug);
+    category = allCategories.find((c) => c.slug === categorySlug);
     if (!category) notFound();
   }
 
@@ -59,12 +67,13 @@ export default async function CatalogPage({ basePath, categorySlug, searchParams
   if (state.page > pages) notFound();
 
   const searching = state.q !== "";
+  const Heading = embeddedTitle ? "h2" : "h1";
   const filtered = hasActiveFilters(state);
   const title = category
     ? category.name
     : searching
       ? `Resultados para «${state.q}»`
-      : (siteConfig.tagline ?? "Nuestros productos");
+      : (embeddedTitle ?? siteConfig.tagline ?? "Nuestros productos");
 
   const categoryHref = (slug?: string) =>
     catalogHref(slug ? `/categoria/${slug}` : "/", nextState(state, {}));
@@ -73,16 +82,30 @@ export default async function CatalogPage({ basePath, categorySlug, searchParams
   const sortOptions = config.sorts.filter((s) => s !== "relevance");
   const defaultActive = state.sort === null || (searching && state.sort === "relevance");
 
+  const hasTree = allCategories.some((c) => c.parent_slug);
+  const view = chipView(allCategories, facets.categories, category);
+  const parentSlug = category?.parent_slug ?? null;
+  const parentCat = parentSlug ? allCategories.find((c) => c.slug === parentSlug) : undefined;
+  // Migas solo en clientes con jerarquía (LIBPREP queda como estaba).
+  const crumbs: Crumb[] | null =
+    category && hasTree
+      ? [
+          { name: "Inicio", href: "/" },
+          ...(parentCat ? [{ name: parentCat.name, href: `/categoria/${parentCat.slug}` }] : []),
+          { name: category.name },
+        ]
+      : null;
   const activeCount = activeFilterCount(state);
   const showPrice = config.filters.showPrice && hasPriceRange(facets.price);
   const hasPanel = filtered || facets.categories.length > 0 || facets.attributes.length > 0 || showPrice;
 
   return (
-    <div>
+    <div className={config.theme.filtersPlacement === "floating" ? "pb-16" : undefined}>
+      {crumbs && <Breadcrumbs items={crumbs} />}
       <section className="mb-6">
-        <h1 className="font-display text-3xl md:text-4xl font-extrabold tracking-tight text-brand max-w-2xl">
+        <Heading className="font-display text-3xl md:text-4xl font-extrabold tracking-tight text-brand max-w-2xl">
           {title}
-        </h1>
+        </Heading>
         <p className="mt-2 text-ink/70" role="status" aria-live="polite">
           {total} {total === 1 ? "resultado" : "resultados"}
           {pages > 1 && ` · Página ${state.page} de ${pages}`}
@@ -107,26 +130,26 @@ export default async function CatalogPage({ basePath, categorySlug, searchParams
       </section>
 
       {hasPanel && (
-        <div className="mb-4">
-          <FilterDrawer key={catalogHref(basePath, state)} activeCount={activeCount}>
+        <div className={config.theme.filtersPlacement === "header" ? undefined : "mb-4"}>
+          <FilterDrawer key={catalogHref(basePath, state)} activeCount={activeCount} placement={config.theme.filtersPlacement}>
             <FilterPanel basePath={basePath} categorySlug={categorySlug} state={state} facets={facets} config={config} />
           </FilterDrawer>
         </div>
       )}
 
-      {facets.categories.length > 0 && (
+      {view.chips.length > 0 && (
         <nav aria-label="Categorías" className="-mx-4 mb-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
           <ul className="flex gap-2 md:flex-wrap">
             <li>
               <Link
-                href={categoryHref()}
-                aria-current={!category ? "page" : undefined}
-                className={`${chip} ${!category ? chipOn : chipOff}`}
+                href={categoryHref(view.allSlug)}
+                aria-current={view.allActive ? "page" : undefined}
+                className={`${chip} ${view.allActive ? chipOn : chipOff}`}
               >
                 Todas
               </Link>
             </li>
-            {facets.categories.slice(0, MAX_CHIPS).map((c) => {
+            {view.chips.slice(0, MAX_CHIPS).map((c) => {
               const active = c.slug === categorySlug;
               return (
                 <li key={c.id}>

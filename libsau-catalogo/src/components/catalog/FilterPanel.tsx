@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { ClientConfig } from "@/config/clients";
 import { catalogHref, hasActiveFilters, nextState, type CatalogState } from "@/lib/catalog-query";
 import { hasPriceRange, prepareFacets } from "@/lib/facets";
+import { orderTree } from "@/lib/categories";
 import type { Facets } from "@/types";
 
 type Props = {
@@ -56,9 +57,9 @@ export default function FilterPanel({ basePath, categorySlug, state, facets, con
                   Todas
                 </Link>
               </li>
-              {facets.categories.map((c) => (
+              {orderTree(facets.categories).map(({ cat: c, depth }) => (
                 <li key={c.id}>
-                  <Link prefetch={false} href={catHref(c.slug)} aria-current={c.slug === categorySlug ? "page" : undefined} className={row(c.slug === categorySlug)}>
+                  <Link prefetch={false} href={catHref(c.slug)} aria-current={c.slug === categorySlug ? "page" : undefined} className={`${row(c.slug === categorySlug)}${depth ? " ps-8" : ""}`}>
                     <span className="min-w-0 truncate">{c.name}</span>
                     <span className="text-xs text-ink/60">{c.product_count}</span>
                   </Link>

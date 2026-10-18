@@ -6,7 +6,13 @@ import SearchBox from "./SearchBox";
 
 // En móvil la lupa es un icono que despliega el buscador (abierto de entrada si ya hay ?q=).
 // Desde sm: el buscador está siempre visible y el icono no existe.
-export default function HeaderSearch({ placeholder }: { placeholder: string }) {
+export default function HeaderSearch({
+  placeholder,
+  withFilters = false,
+}: {
+  placeholder: string;
+  withFilters?: boolean; // hay un botón de filtros a su lado: en móvil el buscador abierto va en su propia fila
+}) {
   const hasQuery = (useSearchParams().get("q") ?? "") !== "";
   const [manual, setManual] = useState<boolean | null>(null);
   const open = manual ?? hasQuery;
@@ -32,7 +38,7 @@ export default function HeaderSearch({ placeholder }: { placeholder: string }) {
           <path d="M20 20l-3.5-3.5" />
         </svg>
       </button>
-      <div id={boxId} ref={box} className={`${open ? "block" : "hidden"} w-full sm:ml-auto sm:block sm:max-w-md sm:flex-1`}>
+      <div id={boxId} ref={box} className={`${open ? "block" : "hidden"}${withFilters ? " order-last sm:order-none" : ""} w-full sm:ml-auto sm:block sm:max-w-md sm:flex-1`}>
         <SearchBox placeholder={placeholder} />
       </div>
     </>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/types";
+import { getClientConfig } from "@/config/clients";
 
 export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
   return (
@@ -28,9 +29,9 @@ export default function ProductCard({ product, priority = false }: { product: Pr
             {product.name}
           </h2>
         </div>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-display text-lg font-bold text-ink">
-            S/ {Number(product.price).toFixed(2)}
+            {getClientConfig().copy.pricePrefix}S/ {Number(product.price).toFixed(2)}
           </span>
           <span className="text-xs bg-accent text-ink px-2.5 py-1 rounded-full font-semibold">
             Ver detalle

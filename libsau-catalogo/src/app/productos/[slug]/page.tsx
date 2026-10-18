@@ -5,6 +5,8 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getProduct, getProducts, getBusiness } from "@/lib/api";
 import { siteUrl } from "@/lib/site";
+import { getClientConfig } from "@/config/clients";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 export const revalidate = 60;
 
@@ -70,6 +72,17 @@ export default async function ProductDetailPage({ params }: Props) {
     `Hola, estoy interesado en este producto: *${product.name}* (Precio: S/ ${price})\nEnlace: ${url}`
   );
   const whatsappUrl = phone ? `https://wa.me/${phone}?text=${message}` : null;
+  const { copy, theme } = getClientConfig();
+  const cat = product.category;
+  // Migas solo en clientes con jerarquía (la categoría trae su padre).
+  const crumbs = cat?.parent
+    ? [
+        { name: "Inicio", href: "/" },
+        { name: cat.parent.name, href: `/categoria/${cat.parent.slug}` },
+        { name: cat.name, href: `/categoria/${cat.slug}` },
+        { name: product.name },
+      ]
+    : null;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -97,9 +110,13 @@ export default async function ProductDetailPage({ params }: Props) {
         }}
       />
 
-      <Link href="/" className="text-sm font-semibold text-brand inline-block mb-4">
-        Volver al catálogo
-      </Link>
+      {crumbs ? (
+        <Breadcrumbs items={crumbs} />
+      ) : (
+        <Link href="/" className="text-sm font-semibold text-brand inline-block mb-4">
+          Volver al catálogo
+        </Link>
+      )}
 
       <div className="bg-white rounded-xl border border-black/10 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="relative aspect-[3/4] w-full bg-paper rounded-lg overflow-hidden">
@@ -125,7 +142,7 @@ export default async function ProductDetailPage({ params }: Props) {
             </h1>
 
             <p className="mt-4 font-display text-3xl font-extrabold text-brand">
-              S/ {price}
+              {copy.pricePrefix}S/ {price}
             </p>
 
             {product.description && (
@@ -154,12 +171,12 @@ export default async function ProductDetailPage({ params }: Props) {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 px-6 rounded-lg flex items-center justify-center gap-2"
+                className={`w-full text-white font-bold py-3.5 px-6 rounded-lg flex items-center justify-center gap-2 ${theme.whatsappStyle === "brand" ? "bg-brand hover:bg-brand/90" : "bg-emerald-700 hover:bg-emerald-800"}`}
               >
                 <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
                 </svg>
-                Comprar por WhatsApp
+                {copy.whatsappCta}
               </a>
             )}
           </div>

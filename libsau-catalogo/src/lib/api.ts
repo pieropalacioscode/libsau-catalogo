@@ -14,11 +14,32 @@ if (!API_URL || !SLUG) {
   throw new Error("Faltan NEXT_PUBLIC_API_URL y/o NEXT_PUBLIC_NEGOCIO_SLUG");
 }
 
+// nginx limita las peticiones por IP (429). Un build con cientos de fichas lo
+// supera: se reintenta con espera creciente en vez de fallar. 404 y otros errores no se reintentan.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Solo durante el build: una petición cada 120 ms por proceso, para quedar bajo el límite.
+let nextSlot = 0;
+async function pace() {
+  if (process.env.NEXT_PHASE !== "phase-production-build") return;
+  const now = Date.now();
+  const at = Math.max(now, nextSlot);
+  nextSlot = at + 120;
+  if (at > now) await sleep(at - now);
+}
+async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    await pace();
+    const res = await fetch(url, init);
+    if ((res.status !== 429 && res.status !== 503) || attempt >= 8) return res;
+    await sleep(Math.min(8000, 500 * 2 ** attempt) + Math.random() * 500);
+  }
+}
+
 // 404 => null. Cualquier otro fallo => excepción, para que ISR
 // conserve la última versión buena en vez de cachear un "vacío".
 // fresh: sin caché (búsquedas y filtros: combinaciones ilimitadas).
 async function request(path: string, opts: { fresh?: boolean } = {}): Promise<Response | null> {
-  const res = await fetch(
+  const res = await fetchRetry(
     `${API_URL}/public/${SLUG}${path}`,
     opts.fresh ? { cache: "no-store" } : { next: { revalidate: 60 } },
   );

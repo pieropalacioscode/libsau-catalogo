@@ -7,6 +7,8 @@ const imageHosts = (process.env.IMAGE_HOSTS ?? "img.kelbazar.com,dnieve.kelpad.c
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  // Pocos procesos de build: cada uno pide a la API y nginx limita las peticiones por IP.
+  experimental: { cpus: 2 },
   // Genera un servidor mínimo en .next/standalone para el contenedor del VPS.
   output: "standalone",
   // @ts-ignore - Evita bloqueo de tipos en Vercel

@@ -2,6 +2,7 @@ export interface CategoryRef {
   id: number;
   name: string;
   slug: string;
+  parent?: { id: number; name: string; slug: string } | null;
 }
 
 export interface Product {
@@ -22,6 +23,7 @@ export interface Category {
   name: string;
   slug: string;
   product_count: number;
+  parent_slug?: string | null; // null/ausente = categoría raíz
 }
 
 export interface FacetValue {
@@ -53,4 +55,10 @@ export interface Business {
   whatsapp_number: string | null;
   logo_url: string | null;
   primary_color: string | null;
+  accent_color?: string | null;
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
+  facebook_url?: string | null;
+  address?: string | null;
+  opening_hours?: string | null;
 }
