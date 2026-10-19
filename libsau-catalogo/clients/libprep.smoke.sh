@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Uso: smoke.sh URL_BASE   (catálogo de LIBPREP: 61 productos, 24 por página)
+# Uso: smoke.sh URL_BASE   (catálogo de LIBPREP: conteos desde el X-Total-Count de la API, 24 por página)
 H=${1:?uso: smoke.sh URL_BASE}
 FAIL=0
 code()  { curl -s -o /dev/null -w "%{http_code}" "$H$1"; }
@@ -9,11 +9,20 @@ has()   { curl -s "$H$1" | grep -c "$2" | tr -d ' '; }
 tag()   { curl -s "$H$1" | grep -o '<meta name="robots"[^>]*noindex' | wc -l | tr -d ' '; }
 check() { if [ "$2" = "$3" ]; then echo "ok     $1"; else echo "FALLA  $1: obtuve [$2], esperaba [$3]"; FAIL=1; fi; }
 
+# Esperados desde la API (X-Total-Count), no fijos: el catálogo crece.
+API=${API_URL:-https://api.kelbazar.com}/public/libprep
+TOTAL=$(curl -s -D - -o /dev/null "$API/productos?limit=1" | tr -d '\r' | grep -i '^x-total-count' | awk '{print $2}')
+case "$TOTAL" in ''|*[!0-9]*) echo "FALLA  no se pudo leer X-Total-Count de $API"; echo "HAY FALLAS"; exit 1;; esac
+PER=24; PAGES=$(( (TOTAL + PER - 1) / PER ))
+exp_cards() { r=$(( TOTAL - PER * ($1 - 1) )); [ "$r" -gt "$PER" ] && r=$PER; [ "$r" -lt 0 ] && r=0; echo "$r"; }
+echo "info   API: $TOTAL productos -> $PAGES paginas de $PER"
+check "ultima pagina: tarjetas segun la API" "$(cards "/?pagina=$PAGES")" "$(exp_cards "$PAGES")"
+
 check "portada 200"                      "$(code /)" 200
-check "portada: 24 tarjetas"             "$(cards /)" 24
-check "pagina 2: 24 tarjetas"            "$(cards '/?pagina=2')" 24
-check "pagina 3: 13 tarjetas"            "$(cards '/?pagina=3')" 13
-check "pagina 4 fuera de rango -> 404"   "$(code '/?pagina=4')" 404
+check "portada: tarjetas segun la API"             "$(cards /)" "$(exp_cards 1)"
+check "pagina 2: tarjetas segun la API"            "$(cards '/?pagina=2')" "$(exp_cards 2)"
+check "pagina 3: tarjetas segun la API"            "$(cards '/?pagina=3')" "$(exp_cards 3)"
+check "pagina fuera de rango -> 404"   "$(code "/?pagina=$((PAGES + 1))")" 404
 check "pagina=1 redirige"                "$(code '/?pagina=1')" 307
 check "orden invalido redirige"          "$(code '/?orden=hack')" 307
 check "portada sin noindex"              "$(tag /)" 0
@@ -25,7 +34,7 @@ check "pagina 2 con aria-current"        "$(has '/?pagina=2' 'aria-current=\"pag
 check "caja de busqueda en el encabezado" "$(has / 'name=\"q\"')" 1
 check "busqueda sin resultados: 200"     "$(code '/?q=zzzzqqq')" 200
 check "categoria existente 200"          "$(code /categoria/ciencia-para-ninos)" 200
-check "categoria: 1 tarjeta"             "$(cards /categoria/ciencia-para-ninos)" 1
+check "categoria: entre 1 y 24 tarjetas"             "$(n=$(cards /categoria/ciencia-para-ninos); [ "$n" -ge 1 ] && [ "$n" -le 24 ] && echo ok || echo "no($n)")" ok
 check "categoria inexistente 404"        "$(code /categoria/no-existe)" 404
 check "categoria pagina 2 fuera de rango" "$(code '/categoria/ciencia-para-ninos?pagina=2')" 404
 check "id viejo sigue en 308"            "$(code /productos/1)" 308
@@ -38,10 +47,10 @@ check "buscar: 1 letra no consulta"      "$(api '/api/buscar?q=a' | grep -c '"it
 check "buscar: sugiere categoria"        "$(api '/api/buscar?q=ciencia' | grep -c 'ciencia-para-ninos')" 1
 check "buscar: no expone sku/costo/stock" "$(api '/api/buscar?q=cientificas' | grep -ciE '"(sku|cost|stock)"')" 0
 check "filtros: boton hamburguesa"        "$(api '/' | grep -o 'aria-haspopup="dialog"' | wc -l)" 1
-check "filtros: panel ofrece Editorial"   "$(api '/' | grep -o 'value="Editorial:Bruño"' | wc -l)" 1
+check "filtros: panel ofrece Proveedor"   "$(api '/' | grep -o 'value="Proveedor:Patlibros"' | wc -l)" 1
 check "filtros: sin filtro no hay casillas marcadas" "$(api '/' | grep -o 'checked=""' | wc -l)" 0
-check "filtros: la casilla elegida sale marcada"     "$(api '/?f=Editorial:Bru%C3%B1o' | grep -o 'checked=""' | wc -l)" 1
-check "filtros: Editorial:Bruño reduce el listado"   "$(n=$(api '/?f=Editorial:Bru%C3%B1o' | grep -o 'href="/productos/[^"]*"' | sort -u | wc -l); [ "$n" -ge 1 ] && [ "$n" -lt 24 ] && echo ok || echo "no($n)")" ok
+check "filtros: la casilla elegida sale marcada"     "$(api '/?f=Proveedor:Patlibros' | grep -o 'checked=""' | wc -l)" 1
+check "filtros: Proveedor:Patlibros reduce el listado"   "$(n=$(api '/?f=Proveedor:Patlibros' | grep -o 'href="/productos/[^"]*"' | sort -u | wc -l); [ "$n" -ge 1 ] && [ "$n" -lt 24 ] && echo ok || echo "no($n)")" ok
 check "filtros: f invalido redirige"      "$(curl -s -o /dev/null -w '%{http_code}' "$H/?f=sinvalor")" 307
 check "filtros: precio invertido redirige" "$(curl -s -o /dev/null -w '%{http_code}' "$H/?precio_min=20&precio_max=10")" 307
 [ $FAIL = 0 ] && echo "TODO OK" || echo "HAY FALLAS"
