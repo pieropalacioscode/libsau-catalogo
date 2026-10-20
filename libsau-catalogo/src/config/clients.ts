@@ -91,12 +91,14 @@ type Override = {
 
 const overrides: Record<string, Override> = {
   libprep: {
-    filters: { order: ["Editorial", "Año de edición", "Impresión"] },
+    filters: { order: ["Proveedor", "Año de edición", "Impresión"] },
     copy: {
       searchPlaceholder: "Buscar por título, autor o editorial",
       itemPlural: "libros",
       emptyTitle: "No encontramos libros con esa búsqueda",
     },
+    // Paleta fiel al logo (verde y naranja vienen del negocio). El logo ya trae el nombre escrito.
+    theme: { focus: "brand", showNameWithLogo: false, iconFile: "icono.png", appleIconFile: "apple-touch-icon.png", whatsappStyle: "brand", paper: "#F4F7F5", ink: "#0B1512" },
   },
   luwart: {
     filters: {
